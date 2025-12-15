@@ -192,6 +192,83 @@
         body.dark-theme .theme-toggle:hover {
             background: rgba(31, 41, 55, 0.9);
         }
+
+        .history-container {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(148, 163, 184, 0.4);
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+        }
+
+        .history-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            color: #4b5563;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .history-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: 6px;
+            background: rgba(148, 163, 184, 0.08);
+            color: #111827;
+        }
+
+        .history-expression {
+            opacity: 0.8;
+        }
+
+        .history-result {
+            font-weight: 600;
+        }
+
+        .history-clear-btn {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            border-radius: 999px;
+            background: transparent;
+            box-shadow: none;
+            color: #6b7280;
+        }
+
+        .history-clear-btn:hover {
+            background: rgba(148, 163, 184, 0.18);
+            transform: none;
+            box-shadow: none;
+        }
+
+        body.dark-theme .history-container {
+            border-top-color: rgba(55, 65, 81, 0.9);
+        }
+
+        body.dark-theme .history-header {
+            color: #9ca3af;
+        }
+
+        body.dark-theme .history-item {
+            background: rgba(31, 41, 55, 0.85);
+            color: #e5e7eb;
+        }
+
+        body.dark-theme .history-clear-btn {
+            color: #9ca3af;
+        }
     </style>
 </head>
 <body>
@@ -225,6 +302,14 @@
             <button class="zero" onclick="appendNumber('0')">0</button>
             <button onclick="appendDecimal()">.</button>
         </div>
+        <div class="history-container" id="historyContainer">
+            <div class="history-header">
+                <span>Журнал операций</span>
+                <button class="history-clear-btn" type="button" onclick="clearHistory()">Очистить</button>
+            </div>
+            <ul class="history-list" id="historyList">
+            </ul>
+        </div>
     </div>
 
     <script>
@@ -232,6 +317,8 @@
         let currentInput = '0';
         let shouldResetDisplay = false;
         const THEME_STORAGE_KEY = 'calculator-theme';
+        const historyList = document.getElementById('historyList');
+        const MAX_HISTORY_ITEMS = 20;
 
         function updateDisplay() {
             display.textContent = currentInput;
@@ -277,6 +364,37 @@
             updateDisplay();
         }
 
+        function addToHistory(expression, result) {
+            if (!historyList) return;
+
+            const li = document.createElement('li');
+            li.className = 'history-item';
+
+            const exprSpan = document.createElement('span');
+            exprSpan.className = 'history-expression';
+            exprSpan.textContent = expression;
+
+            const resSpan = document.createElement('span');
+            resSpan.className = 'history-result';
+            resSpan.textContent = result;
+
+            li.appendChild(exprSpan);
+            li.appendChild(resSpan);
+
+            historyList.insertBefore(li, historyList.firstChild);
+
+            while (historyList.children.length > MAX_HISTORY_ITEMS) {
+                historyList.removeChild(historyList.lastChild);
+            }
+        }
+
+        function clearHistory() {
+            if (!historyList) return;
+            while (historyList.firstChild) {
+                historyList.removeChild(historyList.firstChild);
+            }
+        }
+
         function calculate() {
             try {
                 // Заменяем × на * для вычисления
@@ -289,15 +407,22 @@
                     shouldResetDisplay = true;
                     return;
                 }
-                
+
                 const result = Function('"use strict"; return (' + expression + ')')();
-                
+
                 if (isNaN(result) || !isFinite(result)) {
                     currentInput = 'Ошибка';
-                } else {
-                    currentInput = result.toString();
+                    updateDisplay();
+                    shouldResetDisplay = true;
+                    return;
                 }
-                
+
+                const resultString = result.toString();
+
+                addToHistory(currentInput, resultString);
+
+                currentInput = resultString;
+
                 updateDisplay();
                 shouldResetDisplay = true;
             } catch (error) {
